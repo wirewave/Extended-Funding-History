@@ -12,8 +12,8 @@
       --card-color: #ffffff;
       --input-bg: #ffffff;
       --input-border: #000000;
-      --button-bg: #194d44;
-      --button-hover: #0f2e29;
+      --button-bg: #068a63;
+      --button-hover: #056e4f;
       --quickbutton-bg: rgb(229, 231, 235);
       --quickbutton-hover: rgb(209, 213, 219);
       --fundingrate-line: black;
@@ -31,8 +31,8 @@
       --card-color: #000000;
       --input-bg: #000000;
       --input-border: #ffffff;
-      --button-bg: #194d44;
-      --button-hover: #2a8274;
+      --button-bg: #068a63;
+      --button-hover: #07a677;
       --quickbutton-bg: rgb(59, 63, 69);
       --quickbutton-hover: rgb(79, 81, 85);
       --fundingrate-line: white;
@@ -548,16 +548,12 @@
        */
       async function fetchAndRenderTokens() {
       try {
-        const response = await fetch('https://api.hyperliquid.xyz/info', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ type: 'meta' }),
-        });
+        const response = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://api.starknet.extended.exchange/api/v1/info/markets'));
 
         const meta = await response.json();
-        allTokens = meta.universe
-          .filter(t => !t.isDelisted)  // remove delisted tokens
-          .map(t => t.name);
+        allTokens = meta.data
+          .filter(t => t.status == "ACTIVE")  // remove delisted tokens
+          .map(t => t.assetName);
 
         renderDropdown();
       } catch (error) {
@@ -958,27 +954,39 @@
         try {
           // Fetch all chunks asynchronously
           const fetches = chunks.map(([start, end]) =>
-            fetch('https://api.hyperliquid.xyz/info', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                type: 'fundingHistory',
-                coin: token,
-                startTime: start,
-                endTime: end,
-              }),
-            }).then(res => res.json())
+            fetch('https://corsproxy.io/?' + encodeURIComponent('https://api.starknet.extended.exchange/api/v1/info/' + token + '-USD/funding?startTime=' + start + '&endTime=' + end)).then(res => res.json())
           );
       
           const chunkDataArrays = await Promise.all(fetches);
-          const combinedData = chunkDataArrays.flat().sort((a, b) => a.time - b.time);
+
+          // --- ROBUST DATA EXTRACTION START ---
+          let rawData = [];
+          chunkDataArrays.forEach(res => {
+            // Handle if API returns direct array OR wrapped in {data: ...}
+            if (Array.isArray(res)) rawData.push(...res);
+            else if (res && res.data && Array.isArray(res.data)) rawData.push(...res.data);
+          });
+
+          if (rawData.length === 0) {
+            console.warn("No data found in API response.");
+            toggleSpinner(false);
+            // Optionally clear chart here
+            return;
+          }
+
+          // Normalize data to internal {T, F} structure using known keys 'T' and 'f'
+          const combinedData = rawData.map(d => ({
+            T: new Date(d.T).getTime(), 
+            F: d.f // Using 'f' directly as requested
+          })).sort((a, b) => a.T - b.T);
+          // --- ROBUST DATA EXTRACTION END ---
       
           // Filter data for requested visible range
-          const visibleData = combinedData.filter(d => d.time >= startTime && d.time <= endTime);
+          const visibleData = combinedData.filter(d => d.T >= startTime && d.T <= endTime);
       
           // Prepare labels and fundingValues for chart
-          const labels = visibleData.map(item => new Date(item.time).toLocaleString());
-          let fundingValues = visibleData.map(item => parseFloat(item.fundingRate) * 100);
+          const labels = visibleData.map(item => new Date(item.T).toLocaleString());
+          let fundingValues = visibleData.map(item => parseFloat(item.F) * 100);
       
           // Convert rates to annualized if selected
           if (viewMode === 'annualized') {
@@ -995,9 +1003,9 @@
       
           // Prepare full arrays for moving averages over full fetched data (needed for calculation accuracy)
           const fullFundingValues = combinedData.map(item =>
-            (viewMode === 'annualized' ? parseFloat(item.fundingRate) * 100 * 24 * 365 : parseFloat(item.fundingRate) * 100)
+            (viewMode === 'annualized' ? parseFloat(item.F) * 100 * 24 * 365 : parseFloat(item.F) * 100)
           );
-          const fullTimestamps = combinedData.map(item => item.time);
+          const fullTimestamps = combinedData.map(item => item.T);
       
           // Calculate moving averages for different windows
           const ma24h = calculateMovingAverage(fullTimestamps, fullFundingValues, 24 * 60 * 60 * 1000);
@@ -1026,7 +1034,9 @@
             .join('');
       
           // Filter MAs for visible timestamps (Chart.js expects data array same size as labels)
-          const visibleTimes = visibleData.map(d => d.time);
+          // FIX: Use 'd.T' instead of 'd.time' because we normalized keys earlier
+          const visibleTimes = visibleData.map(d => d.T);
+          
           const filteredMA24h = filterVisibleMovingAverage(fullTimestamps, ma24h, visibleTimes);
           const filteredMA3d = filterVisibleMovingAverage(fullTimestamps, ma3d, visibleTimes);
           const filteredMA7d = filterVisibleMovingAverage(fullTimestamps, ma7d, visibleTimes);
