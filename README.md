@@ -1,10 +1,10 @@
-# Hyperliquid Funding History
+# Extended Funding History
 
-A browser-based tool for viewing historical funding rates on [Hyperliquid](https://hyperliquid.xyz). This lets you visualize and compare different moving averages across various timeframes for any listed token.
+A browser-based tool for viewing historical funding rates on [Extended](https://extended.exchange/). This lets you visualize and compare different moving averages across various timeframes for any listed token.
 
 ## Features
 
-- Token selector with live data from Hyperliquid
+- Token selector with live data from Extended
 - Quick and custom date range selection
 - Hourly and annualized funding rate view modes
 - Multiple moving average overlays (24h, 3d, 7d, 14d, 30d)
@@ -13,13 +13,13 @@ A browser-based tool for viewing historical funding rates on [Hyperliquid](https
 
 ## Usage
 
-Just open the [Hyperliquid-Funding-History](https://wirewave.github.io/Hyperliquid-Funding-History/) in your browser. No installation, API key, or server setup needed.
+Just open the [Extended-Funding-History](https://wirewave.github.io/Extended-Funding-History/) in your browser. No installation, API key, or server setup needed.
 
-> Note: Data is fetched directly from Hyperliquid’s public API.
+> Note: Data is fetched directly from Extended’s public API.
 
 ## Disclaimer
 
-This tool is unaffiliated with and not endorsed by Hyperliquid. It uses their public API for visualization purposes only. Be respectful of their infrastructure — avoid excessive or automated use.
+This tool is unaffiliated with and not endorsed by Extended. It uses their public API for visualization purposes only. Be respectful of their infrastructure — avoid excessive or automated use.
 
 ## License
 
